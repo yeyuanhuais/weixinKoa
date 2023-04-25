@@ -51,7 +51,7 @@ router.get("/api/wx_openid", async (ctx) => {
 });
 
 // 一个用户发什么消息，就反弹什么消息的消息回复功能
-router.post('/message/post', async ctx => {
+router.post("/message/post", ctx => {
   const { ToUserName, FromUserName, Content, CreateTime } = ctx.request.body;
 
   ctx.body = {
