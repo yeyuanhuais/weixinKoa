@@ -1,43 +1,35 @@
-const { Configuration, OpenAIApi } = require('openai');
-const Koa = require('koa');
-const Router = require('koa-router');
-const logger = require('koa-logger');
-const bodyParser = require('koa-bodyparser');
-const fs = require('fs');
-const path = require('path');
-const { Op } = require('sequelize');
-const {
-  init: initDB,
-  Counter,
-  Message,
-  MESSAGE_STATUS_ANSWERED,
-  MESSAGE_STATUS_THINKING,
-  AI_TYPE_TEXT,
-  AI_TYPE_IMAGE,
-} = require('./db');
+const { Configuration, OpenAIApi } = require("openai");
+const Koa = require("koa");
+const Router = require("koa-router");
+const logger = require("koa-logger");
+const bodyParser = require("koa-bodyparser");
+const fs = require("fs");
+const path = require("path");
+const { Op } = require("sequelize");
+const { init: initDB, Counter, Message, MESSAGE_STATUS_ANSWERED, MESSAGE_STATUS_THINKING, AI_TYPE_TEXT, AI_TYPE_IMAGE } = require("./db");
 
-const { sleep, strip } = require('./utils');
+const { sleep, strip } = require("./utils");
 
 const router = new Router();
 
-const homePage = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+const homePage = fs.readFileSync(path.join(__dirname, "index.html"), "utf-8");
 
 // 清空指令
-const CLEAR_KEY = 'CLEAR_';
+const CLEAR_KEY = "CLEAR_";
 const CLEAR_KEY_TEXT = `${CLEAR_KEY}0`;
 const CLEAR_KEY_IMAGE = `${CLEAR_KEY}1`;
 
-const AI_IMAGE_KEY = '作画';
+const AI_IMAGE_KEY = "作画";
 
-const AI_THINKING_MESSAGE = '我已经在编了，请稍等几秒后复制原文再说一遍~';
+const AI_THINKING_MESSAGE = "我已经在编了，请稍等几秒后复制原文再说一遍~";
 
 const LIMIT_AI_TEXT_COUNT = 10;
 const LIMIT_AI_IMAGE_COUNT = 5;
 
-const LIMIT_COUNT_RESPONSE = '对不起，因为ChatGPT调用收费，您的免费使用额度已用完~'
+const LIMIT_COUNT_RESPONSE = "对不起，因为ChatGPT调用收费，您的免费使用额度已用完~";
 
 const configuration = new Configuration({
-  apiKey: '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',
+  apiKey: "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",
 });
 
 const openai = new OpenAIApi(configuration);
@@ -50,37 +42,33 @@ async function buildCtxPrompt({ FromUserName }) {
       aiType: AI_TYPE_TEXT,
     },
     limit: LIMIT_AI_TEXT_COUNT,
-    order: [['updatedAt', 'ASC']],
+    order: [["updatedAt", "ASC"]],
   });
   // 只有一条的时候，就不用封装上下文了
-  return messages.length === 1
-    ? messages[0].request
-    : messages
-        .map(({ response, request }) => `Q: ${request}\n A: ${response}`)
-        .join('\n');
+  return messages.length === 1 ? messages[0].request : messages.map(({ response, request }) => `Q: ${request}\n A: ${response}`).join("\n");
 }
 
 async function getAIResponse(prompt) {
   const completion = await openai.createCompletion({
-    model: 'text-davinci-003',
+    model: "text-davinci-003",
     prompt,
     max_tokens: 1024,
     temperature: 0.1,
   });
 
-  const response = (completion?.data?.choices?.[0].text || 'AI 挂了').trim();
+  const response = (completion?.data?.choices?.[0].text || "AI 挂了").trim();
 
-  return strip(response, ['\n', 'A: ']);
+  return strip(response, ["\n", "A: "]);
 }
 
 async function getAIIMAGE(prompt) {
   const response = await openai.createImage({
     prompt: prompt,
     n: 1,
-    size: '1024x1024',
+    size: "1024x1024",
   });
 
-  const imageURL = response?.data?.data?.[0].url || 'AI 作画挂了';
+  const imageURL = response?.data?.data?.[0].url || "AI 作画挂了";
 
   return imageURL;
 }
@@ -105,9 +93,7 @@ async function getAIMessage({ Content, FromUserName }) {
     return AI_THINKING_MESSAGE;
   }
 
-  const aiType = Content.startsWith(AI_IMAGE_KEY)
-    ? AI_TYPE_IMAGE
-    : AI_TYPE_TEXT;
+  const aiType = Content.startsWith(AI_IMAGE_KEY) ? AI_TYPE_IMAGE : AI_TYPE_TEXT;
 
   // 检查一下历史消息记录，不能超过限制
   const count = await Message.count({
@@ -131,12 +117,12 @@ async function getAIMessage({ Content, FromUserName }) {
   // 因为AI响应比较慢，容易超时，先插入一条记录，维持状态，待后续更新记录。
   await Message.create({
     fromUser: FromUserName,
-    response: '',
+    response: "",
     request: Content,
     aiType,
   });
 
-  let response = '';
+  let response = "";
 
   if (aiType === AI_TYPE_TEXT) {
     // 构建带上下文的 prompt
@@ -164,14 +150,14 @@ async function getAIMessage({ Content, FromUserName }) {
         fromUser: FromUserName,
         request: Content,
       },
-    },
+    }
   );
 
   return `[GPT]: ${response}`;
 }
 
 // 消息推送
-router.post('/message/post', async ctx => {
+router.post("/message/post", async ctx => {
   const { ToUserName, FromUserName, Content, CreateTime } = ctx.request.body;
 
   if (!FromUserName) {
@@ -179,27 +165,25 @@ router.post('/message/post', async ctx => {
       ToUserName: FromUserName,
       FromUserName: ToUserName,
       CreateTime: CreateTime,
-      MsgType: 'text',
-      Content: '无用户信息',
+      MsgType: "text",
+      Content: "无用户信息",
     };
     return;
   }
 
-  if ((Content || '').trim() === '获取id') {
+  if ((Content || "").trim() === "获取id") {
     ctx.body = {
       ToUserName: FromUserName,
       FromUserName: ToUserName,
       CreateTime: CreateTime,
-      MsgType: 'text',
+      MsgType: "text",
       Content: FromUserName,
     };
     return;
   }
 
-  if ((Content || '').startsWith(CLEAR_KEY)) {
-    const clearType = Content.startsWith(CLEAR_KEY_IMAGE)
-      ? AI_TYPE_IMAGE
-      : AI_TYPE_TEXT;
+  if ((Content || "").startsWith(CLEAR_KEY)) {
+    const clearType = Content.startsWith(CLEAR_KEY_IMAGE) ? AI_TYPE_IMAGE : AI_TYPE_TEXT;
     const FromUserName = Content.substring(CLEAR_KEY_TEXT.length);
     const count = await Message.destroy({
       where: {
@@ -213,7 +197,7 @@ router.post('/message/post', async ctx => {
       ToUserName: FromUserName,
       FromUserName: ToUserName,
       CreateTime: CreateTime,
-      MsgType: 'text',
+      MsgType: "text",
       Content: `已重置用户共 ${count} 条消息`,
     };
     return;
@@ -229,23 +213,23 @@ router.post('/message/post', async ctx => {
     ToUserName: FromUserName,
     FromUserName: ToUserName,
     CreateTime: +new Date(),
-    MsgType: 'text',
+    MsgType: "text",
     Content: message,
   };
 });
 
 // 首页
-router.get('/', async ctx => {
+router.get("/", async ctx => {
   ctx.body = homePage;
 });
 
 // 更新计数
-router.post('/api/count', async ctx => {
+router.post("/api/count", async ctx => {
   const { request } = ctx;
   const { action } = request.body;
-  if (action === 'inc') {
+  if (action === "inc") {
     await Counter.create();
-  } else if (action === 'clear') {
+  } else if (action === "clear") {
     await Counter.destroy({
       truncate: true,
     });
@@ -258,7 +242,7 @@ router.post('/api/count', async ctx => {
 });
 
 // 获取计数
-router.get('/api/count', async ctx => {
+router.get("/api/count", async ctx => {
   const result = await Counter.count();
 
   ctx.body = {
@@ -268,25 +252,21 @@ router.get('/api/count', async ctx => {
 });
 
 // 小程序调用，获取微信 Open ID 121
-router.get('/api/wx_openid', async ctx => {
-  if (ctx.request.headers['x-wx-source']) {
-    ctx.body = ctx.request.headers['x-wx-openid'];
+router.get("/api/wx_openid", async ctx => {
+  if (ctx.request.headers["x-wx-source"]) {
+    ctx.body = ctx.request.headers["x-wx-openid"];
   }
 });
 
 const app = new Koa();
-app
-  .use(logger())
-  .use(bodyParser())
-  .use(router.routes())
-  .use(router.allowedMethods());
+app.use(logger()).use(bodyParser()).use(router.routes()).use(router.allowedMethods());
 
 const port = process.env.PORT || 80;
 async function bootstrap() {
   await initDB();
 
   app.listen(port, () => {
-    console.log('启动成功', port);
+    console.log("启动成功", port);
   });
 }
 bootstrap();

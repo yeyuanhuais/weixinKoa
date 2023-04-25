@@ -7,7 +7,7 @@ const sleep = time =>
 const strip = (str, chars) => {
   let newStr = str;
   chars.forEach(char => {
-    newStr = newStr.replace(new RegExp(`^${char}+|${char}+$`, 'g'), '');
+    newStr = newStr.replace(new RegExp(`^${char}+|${char}+$`, "g"), "");
   });
   return newStr;
 };
