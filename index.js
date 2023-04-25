@@ -6,7 +6,7 @@ const bodyParser = require("koa-bodyparser");
 const fs = require("fs");
 const path = require("path");
 const { Op } = require("sequelize");
-const { init: initDB, Counter, Message, MESSAGE_STATUS_ANSWERED, MESSAGE_STATUS_THINKING, AI_TYPE_TEXT, AI_TYPE_IMAGE } = require("./db");
+const { init: initDB, Message, MESSAGE_STATUS_ANSWERED, MESSAGE_STATUS_THINKING, AI_TYPE_TEXT, AI_TYPE_IMAGE } = require("./db");
 
 const { sleep, strip } = require("./utils");
 
@@ -221,34 +221,6 @@ router.post("/message/post", async ctx => {
 // 首页
 router.get("/", async ctx => {
   ctx.body = homePage;
-});
-
-// 更新计数
-router.post("/api/count", async ctx => {
-  const { request } = ctx;
-  const { action } = request.body;
-  if (action === "inc") {
-    await Counter.create();
-  } else if (action === "clear") {
-    await Counter.destroy({
-      truncate: true,
-    });
-  }
-
-  ctx.body = {
-    code: 0,
-    data: (await Counter.count()) + 10,
-  };
-});
-
-// 获取计数
-router.get("/api/count", async ctx => {
-  const result = await Counter.count();
-
-  ctx.body = {
-    code: 0,
-    data: result,
-  };
 });
 
 // 小程序调用，获取微信 Open ID 121
