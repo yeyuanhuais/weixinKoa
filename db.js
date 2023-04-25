@@ -1,9 +1,10 @@
 const { Sequelize, DataTypes } = require("sequelize");
 
 // 从环境变量中读取数据库配置
-let MYSQL_ADDRESS = "sh-cynosdbmysql-grp-ho5748ou.sql.tencentcdb.com:27379";
-let MYSQL_PASSWORD = "A3HnGPKR";
-let MYSQL_USERNAME = "root";
+const { MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_ADDRESS = "" } = process.env;
+// let MYSQL_ADDRESS = "sh-cynosdbmysql-grp-ho5748ou.sql.tencentcdb.com:27379";
+// let MYSQL_PASSWORD = "A3HnGPKR";
+// let MYSQL_USERNAME = "root";
 const [host, port] = MYSQL_ADDRESS.split(":");
 
 const sequelize = new Sequelize("nodejs_demo", MYSQL_USERNAME, MYSQL_PASSWORD, {
@@ -11,7 +12,6 @@ const sequelize = new Sequelize("nodejs_demo", MYSQL_USERNAME, MYSQL_PASSWORD, {
   port,
   dialect: "mysql" /* one of 'mysql' | 'mariadb' | 'postgres' | 'mssql' */,
 });
-
 
 // AI 思考中；
 const MESSAGE_STATUS_THINKING = "THINKING";
